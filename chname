@@ -1,0 +1,222 @@
+#!/bin/sh
+# command options and input_nameuments interpreter
+# project task version
+
+name=`basename $0`
+#converts input_name to uppercase
+convert_uppercase(){
+    echo "$input_name" | tr '[:lower:]' '[:upper:]'
+}
+#converts input_name to lowercase
+convert_lowercase(){
+    echo "$input_name" | tr '[:upper:]' '[:lower:]'
+}
+
+#checks the flags for uppercase and lowercase and converts the input_name accordingly
+check_upper_lower(){
+    if test $uppercase = "y"
+        then            
+            output_name=$(convert_uppercase)       
+        fi
+        if test $lowercase = "y"
+        then
+            output_name=$(convert_lowercase)
+        fi
+}
+
+# changes the name of the file, if the file has an extention, it will be kept unchanged
+change_name(){
+    check_upper_lower
+    if test -f $input_name # checks if the file is a directory if not adds the extention to the output_name
+    then
+        output_name="${output_name%.*}.${input_name##*.}" # adds the extention to the output_name
+    fi
+    if test "$dir_name/$input_name" != "$dir_name/$output_name" # checks if the input_name is the same as the output_name
+    then
+        mv "$dir_name/$input_name" "$dir_name/$output_name" # renames the file
+    else
+        if test $lowercase = "y" 
+        then
+            echo "File $input_name is already lowercase, skipping"
+        fi
+        if test $uppercase = "y"
+        then
+            echo "File $input_name is already uppercase, skipping"
+        fi
+    fi
+
+}
+
+# checks the flag recursive and changes  subdirectory names accordingly
+# if recursive, uses $file, defined by change_recursive_subdir
+# else uses $input_name, defined by change_subdir
+change_subdir(){
+        if test $recursive = "y"
+        then
+            for dir_file in `find "$file" -mindepth 1 -maxdepth 1`
+            do
+                dir_name="${dir_file%/*}"
+                input_name="${dir_file##*/}"
+                change_name
+            done
+        else
+            for dir_file in `find "$input_name" -mindepth 1 -maxdepth 1`
+            do
+                dir_name="${dir_file%/*}"
+                input_name="${dir_file##*/}"
+                change_name
+            done
+        fi
+}
+
+change_recursive_subdir(){ # used for changing all subdirectories of input name recursively
+    for file in `find "$input_name" -type d | tac` # finds all subdirectories of input_name and reverses the order
+    do   
+        change_subdir
+    done
+}
+
+change_recusive_subdir_name(){ #name not appropriate 
+
+    dir_name="."
+    change_name
+    # checks if the input_name is called with "-r" or "-s" flags if so checks if it is a directory, as these arguments
+    # can only be used with directories
+    
+    if test $recursive = "y" || test $subdir = "y"
+    then
+        input_name=$output_name
+        if test -d $input_name 
+        then
+            #checks for recursive flag
+            if test $recursive = "n"
+            then
+            # checks for subdirectory flag if n, changes the given file name else changes the name of files with depth 1 in the given directory
+                if test $subdir = "y"
+                then
+            #        input_name=$output_name
+                    change_subdir        
+                fi                
+            fi
+
+            # checks for recursive flag and subdirectory flag, if both are set changes the name of the given directory and all subdirectories
+            if test $recursive = "y" && test $subdir = "y"
+            then
+            #    input_name=$output_name
+                change_recursive_subdir
+            fi
+        else
+            error_msg "Argument $input_name , $output_name is not a directory, skipping"
+        fi
+    fi
+}
+
+# function for printing error messages to diagnostic output
+error_msg()
+{
+    echo "$name: error: $1" 1>&2
+}
+
+get_filenames(){
+    echo "get_filenames"
+    for input_name in "$@"
+    do
+        echo "file - $input_name"
+
+    done
+    echo "end get_filenames"
+}
+# prints to stdout the help message
+print_help(){
+    cat <<EOT
+Usage:
+    $name [-r|--recursive] [-s|--subdirectory] [-l|--lowercase] [-u|--uppercase] <dir/file names...>
+    $name [-h|--help]
+
+Options:
+    ALL ARGUMENTS EXEPT FOR -h|--help TAKE ONE OR MORE FILE OR DIRECTORY NAMES AS ARGUMENTS
+    -r, --recursive     Recursively change the names of all files in the given directory and its subdirectories
+    including the directory name, only works with subdirectory flag with subdirectories type files.
+    -s, --subdirectory  Change the names of all files in the given directory including the directory name, 
+    only takes subdirectory type files.
+    -l, --lowercase     Change the name of the file to lowercase.
+    -u, --uppercase     Change the name of the file to uppercase.
+
+Examples:
+    $name -h
+    $name -u <dir/file name>
+    $name -s -l <dir name> <dir name>
+    $name -r -s -u <dir name>
+
+EOT
+    exit 0
+
+}
+# less than 2 input statements given, if only 1 checks for help argument
+if test -z "$1" || (test -z "$2" && test "$1" != "-h" && test "$1" != "--help")
+then
+    cat<<EOT 1>&2
+usage:
+    $name [-r|--recursive] [-s|--subdirectories] [-l|--lowercase|-u|-uppercase] <dir/file names...>
+    $name  [-h|--help]
+
+$name correct syntax examples:
+    $name -h 
+    $name -u <dir/file name>
+    $name -s -l <dir name>
+    $name -r -s -u <dir name>
+    
+EOT
+exit 1
+fi
+# sets the flags for the options
+recursive=n
+subdir=n
+lowercase=n
+uppercase=n
+
+# checks the input arguments and changes the flags accordingly
+while test "x$1" != "x" #while there are arguments left to parse
+do
+    case "$1" in
+        -h|--help) print_help;;
+        -r|--recursive) recursive="y";;
+        -s|--subdirectory) subdir="y";;
+        -l|--lowercase) lowercase="y";;
+        -u|--uppercase) uppercase="y";;
+        -*) error_msg "bad option $1"; exit 1 ;;
+         *) break;; #input_name="$1";; #get_filenames "$@";echo "got all file names";;
+    esac
+    shift
+done
+
+# checks if both uppercase and lowercase flags are set if so prints an error message 
+if test $lowercase = "y" && test $uppercase = "y"
+then
+    error_msg "cannot use both -l and -u options"
+    exit 1
+fi
+#checks for recursive flag and subdirectory flag, sends error message if they are different from each other
+if test $recursive = "y" && test $subdir = "n"
+then
+    error_msg "Cannot use -r without -s"
+    exit 1
+fi
+
+for input_name in "$@"
+do
+    #echo "input_name - $input_name"
+    if test -e $input_name #checks if the input_name exists
+    then #does nothing because the input_name exists
+        if test -f $input_name && test $subdir = "y"
+        then
+            error_msg "Argument $input_name is a file, but directory only flags are set, skipping"
+        else
+            change_recusive_subdir_name
+        fi
+    else
+        error_msg "File or directory does not exist, skipping input argument $input_name"
+    fi
+done
+
+exit 0
