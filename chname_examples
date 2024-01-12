@@ -1,0 +1,103 @@
+#!/bin/sh
+# Used to test chname
+name=`basename $0`
+
+create_subdir_n_deep(){
+    #unfinished, only creates the directories
+#    i in `seq 1 $dir_deep`
+    i=0
+    create_dir_name="$dir_name$i"
+    prog="test_prog"
+
+    while test $i != $dir_deep
+        do
+        mkdir $create_dir_name
+        create_example_files
+        i=$((i + 1)) #increments i
+        create_dir_name="$create_dir_name/$dir_name$i"     
+        
+    done
+    
+}
+create_example_files(){
+    touch "$create_dir_name/UPPERCASE%#$.txt"
+    touch "$create_dir_name/l0werc@se!.cpp"
+    touch "$create_dir_name/S0m3_LoWer!sOmE_UpPer"
+
+}
+hold_remove(){
+    read -p "Press enter to continue" enter_key
+    echo
+    echo "Deleting directories and files created"
+    echo
+    if test $case_option = "u"
+    then
+        rm -r "$(echo "$dir_name$zero" | tr '[:lower:]' '[:upper:]')"
+    else
+        rm -r "$(echo "$dir_name$zero" | tr '[:upper:]' '[:lower:]')"
+    fi
+
+    echo " Directories and files deleted"
+    echo
+}
+
+case_option(){
+    read -p "Enter 'u' for UPPERCASE or 'l' for lowercase: " case_option
+
+    case "$case_option" in
+        u|U) case_option='u';;
+        l|L) case_option='l';;
+        *) echo "Invalid option. Defaulting to lowercase.";;
+    esac
+}
+if test "$1" 
+then 
+echo "This program doesn't require any arguments, it will test everything and wait for the users signal to continue'\n'"; 
+exit 1; 
+fi
+#Tests recursive
+zero='0'
+dir_deep=4
+dir_name="testRecursive"
+file_name="$dir_name.txt"
+create_dir_name='.'
+create_subdir_n_deep
+
+echo "Testing recursive, argument -r"
+case_option
+
+echo "------------------- ls -R before running ./chname -r -s -$case_option $dir_name$zero -------------------'\n'"
+ls -R
+
+./chname -r -s -$case_option "$dir_name$zero" 
+
+echo "------------------- ls -R after running ./chname -r -s -$case_option $dir_name$zero -------------------'\n'"
+ls -R
+
+hold_remove
+
+#tests subdirectories
+dir_deep=1
+dir_name="testSubdir"
+create_dir_name='.'
+create_subdir_n_deep
+
+echo "Testing subdirectories, argument -s"
+case_option
+
+echo "------------------- ls -R before running ./chname -s -$case_option $dir_name$zero -------------------'\n'"
+ls $dir_name$zero
+
+./chname -s -$case_option $dir_name$zero
+
+echo "'\n'------------------- ls -R after running ./chname -s -$case_option $dir_name$zero -------------------'\n'"
+if test $case_option = "u"
+    then
+        ls "$(echo "$dir_name$zero" | tr '[:lower:]' '[:upper:]')"
+    else
+        ls "$(echo "$dir_name$zero" | tr '[:upper:]' '[:lower:]')"
+    fi
+
+hold_remove
+
+echo 
