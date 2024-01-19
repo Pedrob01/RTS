@@ -1,7 +1,10 @@
 # ALL Warsaw RTS course descriptions
+evaluations:
+task 1 - 9/10
+task 2 - 10/10
+project - ?/10
 # Task1
 PROCESSES AND SIGNALS
-
 
 [] 1. Write a program in C with the name tsig, which tests synchronization
   mechanisms and signals. Use the following system functions: fork(), wait(),
