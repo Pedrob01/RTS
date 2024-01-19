@@ -47,57 +47,129 @@ case_option(){
     case "$case_option" in
         u|U) case_option='u';;
         l|L) case_option='l';;
-        *) echo "Invalid option. Defaulting to lowercase.";;
+        *) echo "Invalid option. Defaulting to lowercase."
+            case_option='l';;
     esac
 }
+
+display_result() {
+    if [ $1 -eq 0 ]; then
+        echo "[PASS] $2"
+    else
+        echo "[FAIL] $2"
+    fi
+}
+
 if test "$1" 
 then 
-echo "This program doesn't require any arguments, it will test everything and wait for the users signal to continue'\n'"; 
+echo "This program doesn't require any arguments, it will test everything and wait for the users signal to continue\n"; 
 exit 1; 
 fi
+clear
+echo "          Testing ./chname -h"
+
+./chname -h
+
+read -p "Press enter to continue" enter_key
+clear
+
+#Tests error messages
+echo "          Testing error messages"
+
+echo "\nWith no input name given ./chname -l test\n"
+./chname -l
+read -p "Press enter to continue" enter_key
+clear
+
+echo "\nWith both -u and -l arguments ./chname -u -l test:\n"
+./chname -u -l test
+
+echo "\n-r with no -s ./chname -r -l test\n"
+./chname -r -l test
+
+echo "\nWith invalid option ./chname -z test\n"
+./chname -z test
+
+echo "\nWith no arguments ./chname\n"
+./chname
+
+read -p "Press enter to continue" enter_key
+clear
+
+echo "\nWith inexistent file 'test' ./chname -l test\n"
+./chname -l test
+echo "\n Message is the same for only one existent file or a list of them mixed with inexistent files\n"
+
+read -p "Press enter to continue" enter_key
+clear
+
+echo "\nWith inexistent directory 'test' ./chname -l test\n"
+./chname -l -s test
+touch test
+echo "\nWith file but -s argument ./chname -s test\n"
+./chname -s test
+rm test
+echo "\nThere is also a warning for when a file is skipped because of it alreadt being uppercase or lower case which will be seen shortly\n"
+
+read -p "Press enter to continue" enter_key
+clear
+#Tests uppercase and lowercase
+touch 'UPPERCASE%#$.txt'
+touch 'l0werc@se!'
+
+echo "Testing uppercase, argument -u and lowercase, argument -l\n"
+
+echo "------------------- ls before running ./chname -$case_option $dir_name$zero -------------------\n"
+ls 
+./chname -l UPPERCASE%#$.txt
+./chname -u l0werc@se!
+echo "------------------- ls  after running ./chname -$case_option $dir_name$zero -------------------\n"
+ls 
+
+read -p "Press enter to continue" enter_key
+rm -r "$(echo "UPPERCASE%#$.txt" | tr '[:upper:]' '[:lower:]')"
+rm -r "$(echo "l0werc@se!" | tr '[:lower:]' '[:upper:]')"
+clear
+
 #Tests recursive
 zero='0'
-dir_deep=4
+dir_deep=3
 dir_name="testRecursive"
 file_name="$dir_name.txt"
 create_dir_name='.'
 create_subdir_n_deep
 
-echo "Testing recursive, argument -r"
+echo "Testing recursive, argument -r\n"
 case_option
 
-echo "------------------- ls -R before running ./chname -r -s -$case_option $dir_name$zero -------------------'\n'"
-ls -R
-
+echo "------------------- ls -R before running ./chname -r -s -$case_option $dir_name$zero -------------------\n"
+ls -R -r
+echo "\nchname warning messages\n"
 ./chname -r -s -$case_option "$dir_name$zero" 
 
-echo "------------------- ls -R after running ./chname -r -s -$case_option $dir_name$zero -------------------'\n'"
-ls -R
+echo "------------------- ls -R after running ./chname -r -s -$case_option $dir_name$zero -------------------\n"
+ls -R -r
 
 hold_remove
-
+clear
 #tests subdirectories
 dir_deep=1
 dir_name="testSubdir"
 create_dir_name='.'
 create_subdir_n_deep
 
-echo "Testing subdirectories, argument -s"
+echo "Testing subdirectories, argument -s\n"
 case_option
 
-echo "------------------- ls -R before running ./chname -s -$case_option $dir_name$zero -------------------'\n'"
-ls $dir_name$zero
+echo "------------------- ls -R before running ./chname -s -$case_option $dir_name$zero -------------------\n"
+ls -R
+
+echo "\nchname warning messages\n"
 
 ./chname -s -$case_option $dir_name$zero
 
-echo "'\n'------------------- ls -R after running ./chname -s -$case_option $dir_name$zero -------------------'\n'"
-if test $case_option = "u"
-    then
-        ls "$(echo "$dir_name$zero" | tr '[:lower:]' '[:upper:]')"
-    else
-        ls "$(echo "$dir_name$zero" | tr '[:upper:]' '[:lower:]')"
-    fi
+echo "'\n'------------------- ls -R after running ./chname -s -$case_option $dir_name$zero -------------------\n"
+ls -R
 
 hold_remove
-
-echo 
+echo
