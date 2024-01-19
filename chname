@@ -1,6 +1,8 @@
 #!/bin/sh
-# command options and input_nameuments interpreter
+# change name script
 # project task version
+# name: chname
+# author: Pedro Batista
 
 name=`basename $0`
 #converts input_name to uppercase
@@ -26,11 +28,21 @@ check_upper_lower(){
 
 # changes the name of the file, if the file has an extention, it will be kept unchanged
 change_name(){
+
     check_upper_lower
+
     if test -f $input_name # checks if the file is a directory if not adds the extention to the output_name
     then
-        output_name="${output_name%.*}.${input_name##*.}" # adds the extention to the output_name
+        ##checks if the input_name has an extention
+        if test "${input_name##*.}" = "$input_name" # checks if the input_name has an extention
+        then
+            output_name=$output_name
+        else
+            output_name="${output_name%.*}.${input_name##*.}" # adds the extention to the output_name
+        fi
+
     fi
+
     if test "$dir_name/$input_name" != "$dir_name/$output_name" # checks if the input_name is the same as the output_name
     then
         mv "$dir_name/$input_name" "$dir_name/$output_name" # renames the file
@@ -39,12 +51,12 @@ change_name(){
         then
             echo "File $input_name is already lowercase, skipping"
         fi
+        
         if test $uppercase = "y"
         then
             echo "File $input_name is already uppercase, skipping"
         fi
     fi
-
 }
 
 # checks the flag recursive and changes  subdirectory names accordingly
