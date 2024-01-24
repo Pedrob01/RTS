@@ -26,6 +26,7 @@
     void SIGINT_handler(int signum);
 
     void print_semaphore_values();
+    
     struct shm{
         int state[phil_Num];
         int hungry_count;
@@ -51,6 +52,7 @@
     }
     int max_state2_count = 0;
     int semaphore_id;
+    pid_t pid_num[phil_Num];
 
 int main(){
         //initializing shared memory
@@ -68,8 +70,9 @@ int main(){
         for(int i = 0; i < phil_Num; i++){
            // sleep(rand() % 2 +1);
             pid = fork();
+            pid_num[i] = pid;
             if (pid == 0) {
-                printf("Philosopher %d has started thinking\n", i);
+                printf("Philosopher %d initialized\n", i);
                 philosopher(i);
                 exit(0);
             }
@@ -82,7 +85,8 @@ int main(){
     // Parent process prints each philosopher's state
     if(pid > 0){ //parent process
         signal(SIGINT, SIGINT_handler);
-        int state1_count, state2_count;
+        int state1_count,state2_count;
+        
         while(1){
             state1_count = 0;
             state2_count = 0;
@@ -98,25 +102,13 @@ int main(){
                 }
                 
             }
-            print_semaphore_values();
+
             printf("\n");
             if (state2_count > max_state2_count)
             {
                 max_state2_count = state2_count;
             }
             
-            if(state1_count == 5){
-                struct sembuf sem_op[2];
-                sem_op[0].sem_num = rand() % 5; //random philosopher
-                sem_op[1].sem_num = rand() % 5; //random philosopher
-
-                printf("Deadlock, each philosopher has one fork removing fork from philosophers %d and %d\n", sem_op[0].sem_num, sem_op[1].sem_num);
-                sem_op[0].sem_op = 1; //increase semaphore value
-                sem_op[1].sem_op = 1;
-
-                semop(semaphore_id, sem_op, 2);
-            }
-
             sleep(1);
         }
     }
@@ -149,15 +141,13 @@ int main(){
 void philosopher(int id) {
     while(1){
         shared_memory->state[id] = 0; //Thinking
-        usleep(rand() % 500000);     
-        while(shared_memory->hungry_count >= 3) 
-        {
-        }
-        
-        grab_fork(id);       
+        usleep(rand() % 500000); 
+            
         shared_memory->state[id] = 1;
+
+        grab_fork(id); 
         shared_memory->hungry_count++;
-        usleep(rand() % 500000);     
+//      usleep(rand() % 500000);     
 
         shared_memory->state[id] = 2; //Eating
         shared_memory->hungry_count--;
@@ -173,6 +163,9 @@ void SIGINT_handler(int signum){
         // Cleanup: remove semaphores
         for (int i = 0; i < fork_Num; i++) {
             semctl(semaphore_id, i, IPC_RMID, 0);
+        }
+        for(int i= 0; i< phil_Num; i++){
+            kill(pid_num[i], SIGKILL);
         }
         shmdt(shared_memory);
         printf("Max number of philosophers eating at the same time: %d\n", max_state2_count);
